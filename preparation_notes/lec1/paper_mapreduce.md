@@ -11,7 +11,7 @@ Output: Key2, List of Values
 
 idea is that the map emits a bunch of things associated to a k2 key, and reduce handles all values v2 for a specific k2 emitted by the distributed map function e.g. counting url access freq, reversing web-link graph, distributed grep, term-vector per host, inverted index, distributed sort
 
-![Image of MapReduce implementation](assets/mapreduce.png)
+![Image of MapReduce implementation](../assets/mapreduce.png)
 
 ### General Idea:
 Automatic Partition Input Data to M splits -> Machine parallel process of input runs Map() -> produces Intermediate <Key,Value> -> Reduce Invocation -> Partition Intermediate Key By Hash Function (so not 1 machine handles all keys, split keys evenly) -> Worker from Reduce grab data from workers with data from map -> Reduce Done
