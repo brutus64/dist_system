@@ -21,7 +21,7 @@ type AssignTaskArgs struct {
 
 //when a worker gets information from a coordinator what should we receive back? all values in a reply needs to be public
 type AssignTaskReply struct {
-	MapTask bool //True = map, False = reduce
+	TaskType string //True = map, False = reduce
 	WorkerNumber int //For Map/Reduce number
 	//for map
 	InputFile string
@@ -31,6 +31,15 @@ type AssignTaskReply struct {
 	ReduceTaskNum int //reads from local file
 }
 
+type FinishTaskArgs struct {
+	WorkerNumber int
+	Status string
+
+}
+
+type FinishTaskReply struct {
+
+}
 type ExampleArgs struct {
 	X int
 }

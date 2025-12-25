@@ -32,7 +32,7 @@ func Worker(mapf func(string, string) []KeyValue,
 	reduce func(string, []string) string) {
 
 	// Your worker implementation here.
-
+	
 	// uncomment to send the Example RPC to the coordinator.
 	// CallExample()
 
@@ -72,7 +72,7 @@ func CallExample() {
 // usually returns true.
 // returns false if something goes wrong.
 //
-func call(rpcname string, args interface{}, reply interface{}) bool {
+func call(rpcname string, args any, reply any) bool {
 	// c, err := rpc.DialHTTP("tcp", "127.0.0.1"+":1234")
 	sockname := coordinatorSock()
 	c, err := rpc.DialHTTP("unix", sockname)

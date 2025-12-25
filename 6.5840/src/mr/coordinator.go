@@ -3,25 +3,33 @@ package mr
 import (
 	"log"
 	"net"
-	"os"
-	"net/rpc"
 	"net/http"
+	"net/rpc"
+	"os"
 	"sync"
+	"time"
 )
 
 //need to keep track of tasks and certain info on them like start time for timeout
-type TaskTrack struct {
-	jobType string
-	workerNum string //can be mapnumber or reducenumber
-	timeStart string
-	status string //can be either in-progress, idle, or
+type MapTask struct {
+	workerNum string //mapnumber, good for 
+	timeStart time.Time
+	status string //can be either in-progress, idle, or done
 	inputFile string
 }
 
+type ReduceTask struct {
+	workerNum string //reducenumber to know what file to look out for in reducer
+	timeStart time.Time
+	status string //can be either in-progress, idle,
+
+}
 type Coordinator struct {
 	// Your definitions here.
-	tasks []TaskTrack
+	mapTasks []MapTask
+	reduceTasks []ReduceTask
 	inputFiles []string
+	n int
 	mu sync.Mutex
 
 	//rpc under the hood runs each RPC handler in own goroutine so need to use a mutex
@@ -36,9 +44,26 @@ func (c *Coordinator) AssignTask(args *AssignTaskArgs, reply *AssignTaskReply) e
 	//to assign a task, need to look for map
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	
+
+	return nil
 }
 
+
+
+func (c *Coordinator) ConsistentCheck() error {
+	//check for tasks that take longer than 10 seconds and put them to idle if its done
+	for _, v := range c.mapTasks {
+		if time.Since(v.timeStart) > time.Second * 10 {
+
+		}
+	}
+	for _, v := range c.reduceTasks {
+		if time.Since(v.timeStart) > time.Second * 10 {
+
+		}
+	}
+	return nil
+}
 //
 // an example RPC handler.
 //
@@ -72,10 +97,15 @@ func (c *Coordinator) server() {
 //
 func (c *Coordinator) Done() bool {
 	ret := false
-
-	// Your code here.
-
-
+	count := 0
+	for _, v := range c.reduceTasks {
+		if v.status == "done" {
+			count += 1
+		}
+	}
+	if count == c.n {
+		ret = true
+	}
 	return ret
 }
 
@@ -86,10 +116,16 @@ func (c *Coordinator) Done() bool {
 //
 func MakeCoordinator(files []string, nReduce int) *Coordinator {
 	c := Coordinator{}
+	c.inputFiles = files
+	c.n = nReduce
 
-	// Your code here.
-
-
+	go func() {
+		for {
+			c.ConsistentCheck()
+			time.Sleep(2*time.Second)
+		}
+	}()
 	c.server()
+	
 	return &c
 }
