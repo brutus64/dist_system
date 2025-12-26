@@ -12,16 +12,16 @@ import (
 
 //need to keep track of tasks and certain info on them like start time for timeout
 type MapTask struct {
-	workerNum string //mapnumber, good for 
+	taskNum int //mapnumber, good for
 	timeStart time.Time
-	status string //can be either in-progress, idle, or done
+	status string //can be either working, idle, or done
 	inputFile string
 }
 
 type ReduceTask struct {
-	workerNum string //reducenumber to know what file to look out for in reducer
+	taskNum int //reducenumber to know what file to look out for in reducer
 	timeStart time.Time
-	status string //can be either in-progress, idle,
+	status string //can be either working, idle,
 
 }
 type Coordinator struct {
@@ -39,31 +39,50 @@ type Coordinator struct {
 
 }
 
+//have it check if map is done, if not also return a list of string of inputfiles not done 
+func (c *Coordinator) IsMapDone() bool {
+	inputMap := make(map[string]bool)
+	for _, v := range c.inputFiles {
+		inputMap[v] = false
+	}
+	numDone := 0
+	for _, v := range c.mapTasks {
+		if v.status == "done" && inputMap[v.inputFile] == false {
+			inputMap[v.inputFile] = true
+			numDone++
+		}
+	}
+	return numDone == len(inputMap) 
+}
+
 // Your code here -- RPC handlers for the worker to call.
 func (c *Coordinator) AssignTask(args *AssignTaskArgs, reply *AssignTaskReply) error {
 	//to assign a task, need to look for map
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	if !c.IsMapDone() { //map task assign
+		//assign an input file that no worker is working on or is marked as done.
+		for i, v := range c.mapTasks {
+			if v.status == "idle" {
+				c.mapTasks[i].status = "working"
+				// v.inputFile
+				// v.taskNum
+			}
+		}
+	} else { //reduce task assign
+		//assign a reducetask
+		for i, v := range c.reduceTasks {
+			if v.status == "idle" {
+				c.reduceTasks[i].status = "working"
+				// v.taskNum
+			}
+		}
+	}
 
+	//look for if empty inputFile, also check if mapTasks are all done
 	return nil
 }
 
-
-
-func (c *Coordinator) ConsistentCheck() error {
-	//check for tasks that take longer than 10 seconds and put them to idle if its done
-	for _, v := range c.mapTasks {
-		if time.Since(v.timeStart) > time.Second * 10 {
-
-		}
-	}
-	for _, v := range c.reduceTasks {
-		if time.Since(v.timeStart) > time.Second * 10 {
-
-		}
-	}
-	return nil
-}
 //
 // an example RPC handler.
 //
@@ -71,6 +90,25 @@ func (c *Coordinator) ConsistentCheck() error {
 //
 func (c *Coordinator) Example(args *ExampleArgs, reply *ExampleReply) error {
 	reply.Y = args.X + 1
+	return nil
+}
+
+
+
+func (c *Coordinator) ConsistentCheck() error {
+	//check for tasks that take longer than 10 seconds and put them to idle if its done
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	for i, v := range c.mapTasks {
+		if time.Since(v.timeStart) > time.Second * 10 && v.status == "working" {
+			c.mapTasks[i].status = "idle"
+		}
+	}
+	for i, v := range c.reduceTasks {
+		if time.Since(v.timeStart) > time.Second * 10 && v.status == "working" {
+			c.reduceTasks[i].status = "idle"
+		}
+	}
 	return nil
 }
 
@@ -118,7 +156,14 @@ func MakeCoordinator(files []string, nReduce int) *Coordinator {
 	c := Coordinator{}
 	c.inputFiles = files
 	c.n = nReduce
-
+	//initializing the maptasks and reducetasks
+	for i := 0; i < len(c.inputFiles); i++ {
+		c.mapTasks = append(c.mapTasks, MapTask{i, time.Time{}, "idle", c.inputFiles[i]})
+	}
+	for i := 0; i < c.n; i++ {
+		c.reduceTasks = append(c.reduceTasks, ReduceTask{i, time.Time{}, "idle"})
+	}
+	//need to check for crashes and timeouts
 	go func() {
 		for {
 			c.ConsistentCheck()
