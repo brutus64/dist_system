@@ -1,10 +1,13 @@
 package mr
 
-import "fmt"
-import "log"
-import "net/rpc"
-import "hash/fnv"
-
+import (
+	// "encoding/json"
+	"fmt"
+	"hash/fnv"
+	"log"
+	"net/rpc"
+	"time"
+)
 
 //
 // Map functions return a slice of KeyValue.
@@ -25,7 +28,10 @@ func ihash(key string) int {
 }
 
 func runMap(mapf func(string, string) []KeyValue) {
-	
+	/*
+	check N reduce tasks, 1 line per reduce task so mr-out-X-Y for x'th map task y'th reduce task
+	have keys and values in the form of: "%v %v" format key,value e.g. fmt.Fprintf(ofile, "%v %v\n", intermediate[i].Key, output)
+	*/
 }
 
 func runReduce(reduce func(string, []string) string) {
@@ -43,19 +49,27 @@ func Worker(mapf func(string, string) []KeyValue, reduce func(string, []string) 
 	for {
 		args := AssignTaskArgs{}
 		reply := AssignTaskReply{}
-		ok := call("smth", &args, &reply)
+		ok := call("Coordinator.AssignTask", &args, &reply)
 		if ok {
-			if reply.IsMap {
-				//map function
-				runMap(mapf)
+			if reply.TaskAvail {
+				if reply.IsMap {
+					//map function
+					//read file before calling runmap
+					// dec := json.NewDecoder()
+					// for {
+						
+					// }
+					runMap(mapf)
+				} else {
+					runReduce(reduce)
+				}
 			} else {
-				runReduce(reduce)
+				time.Sleep(time.Second * 2)
 			}
+		} else {
+			time.Sleep(time.Second * 2)
 		}
-		//need for loop to call assigntask again after its done
 	}
-	
-
 }
 
 //

@@ -1,6 +1,7 @@
 package mr
 
 import (
+	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -12,25 +13,25 @@ import (
 
 //need to keep track of tasks and certain info on them like start time for timeout
 type MapTask struct {
-	taskNum int //mapnumber, good for
-	timeStart time.Time
-	status string //can be either working, idle, or done
-	inputFile string
+	taskNum 	int //mapnumber, good for
+	timeStart 	time.Time
+	status 		string //can be either working, idle, or done
+	inputFile 	string
 }
 
 type ReduceTask struct {
-	taskNum int //reducenumber to know what file to look out for in reducer
-	timeStart time.Time
-	status string //can be either working, idle,
+	taskNum 	int //reducenumber to know what file to look out for in reducer
+	timeStart 	time.Time
+	status 		string //can be either working, idle,
 
 }
 type Coordinator struct {
 	// Your definitions here.
-	mapTasks []MapTask
+	mapTasks 	[]MapTask
 	reduceTasks []ReduceTask
-	inputFiles []string
-	n int
-	mu sync.Mutex
+	inputFiles 	[]string
+	n 			int
+	mu 			sync.Mutex
 
 	//rpc under the hood runs each RPC handler in own goroutine so need to use a mutex
 	//need to store all worker tasks (number, when they started, so we know 10 second timer or have it be a timeout in a "go")
@@ -69,6 +70,7 @@ func (c *Coordinator) AssignTask(args *AssignTaskArgs, reply *AssignTaskReply) e
 				reply.MapTaskNum = v.taskNum
 				reply.InputFile = v.inputFile
 				reply.N = c.n
+				reply.TaskAvail = true
 				//need to also start it now
 				c.mapTasks[i].timeStart = time.Now()
 				return nil
@@ -82,6 +84,7 @@ func (c *Coordinator) AssignTask(args *AssignTaskArgs, reply *AssignTaskReply) e
 				reply.IsMap = false
 				reply.ReduceTaskNum = v.taskNum
 				reply.N = c.n
+				reply.TaskAvail = true
 				c.reduceTasks[i].timeStart = time.Now()
 				return nil
 			}
@@ -162,6 +165,7 @@ func (c *Coordinator) Done() bool {
 func MakeCoordinator(files []string, nReduce int) *Coordinator {
 	c := Coordinator{}
 	c.inputFiles = files
+	fmt.Println(c.inputFiles)
 	c.n = nReduce
 	//initializing the maptasks and reducetasks
 	for i := 0; i < len(c.inputFiles); i++ {
