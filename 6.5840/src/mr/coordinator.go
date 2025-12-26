@@ -65,8 +65,13 @@ func (c *Coordinator) AssignTask(args *AssignTaskArgs, reply *AssignTaskReply) e
 		for i, v := range c.mapTasks {
 			if v.status == "idle" {
 				c.mapTasks[i].status = "working"
-				// v.inputFile
-				// v.taskNum
+				reply.IsMap = true
+				reply.MapTaskNum = v.taskNum
+				reply.InputFile = v.inputFile
+				reply.N = c.n
+				//need to also start it now
+				c.mapTasks[i].timeStart = time.Now()
+				return nil
 			}
 		}
 	} else { //reduce task assign
@@ -74,12 +79,14 @@ func (c *Coordinator) AssignTask(args *AssignTaskArgs, reply *AssignTaskReply) e
 		for i, v := range c.reduceTasks {
 			if v.status == "idle" {
 				c.reduceTasks[i].status = "working"
-				// v.taskNum
+				reply.IsMap = false
+				reply.ReduceTaskNum = v.taskNum
+				reply.N = c.n
+				c.reduceTasks[i].timeStart = time.Now()
+				return nil
 			}
 		}
 	}
-
-	//look for if empty inputFile, also check if mapTasks are all done
 	return nil
 }
 

@@ -24,17 +24,37 @@ func ihash(key string) int {
 	return int(h.Sum32() & 0x7fffffff)
 }
 
+func runMap(mapf func(string, string) []KeyValue) {
+	
+}
 
+func runReduce(reduce func(string, []string) string) {
+	
+}
 //
 // main/mrworker.go calls this function.
 //
-func Worker(mapf func(string, string) []KeyValue,
-	reduce func(string, []string) string) {
+func Worker(mapf func(string, string) []KeyValue, reduce func(string, []string) string) {
 
 	// Your worker implementation here.
 	
 	// uncomment to send the Example RPC to the coordinator.
 	// CallExample()
+	for {
+		args := AssignTaskArgs{}
+		reply := AssignTaskReply{}
+		ok := call("smth", &args, &reply)
+		if ok {
+			if reply.IsMap {
+				//map function
+				runMap(mapf)
+			} else {
+				runReduce(reduce)
+			}
+		}
+		//need for loop to call assigntask again after its done
+	}
+	
 
 }
 
