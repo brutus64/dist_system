@@ -84,6 +84,7 @@ func (c *Coordinator) AssignTask(args *AssignTaskArgs, reply *AssignTaskReply) e
 				reply.IsMap = false
 				reply.ReduceTaskNum = v.taskNum
 				reply.N = c.n
+				reply.MapTaskNum = len(c.mapTasks)
 				reply.TaskAvail = true
 				c.reduceTasks[i].timeStart = time.Now()
 				return nil

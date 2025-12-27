@@ -26,6 +26,7 @@ type AssignTaskReply struct {
 	// WorkerNumber int //For Map/Reduce number
 	InputFile 		string
 	MapTaskNum 		int
+	TotalMapTasks	int //for reduce to know filenames
 	N 				int //for reduce task
 	ReduceTaskNum 	int //reads from local file
 	TaskAvail 		bool //need a way for worker to know if it has a task or not when rpc calls so it knows if it should sleep or work on something
@@ -38,7 +39,6 @@ type FinishTaskArgs struct {
 }
 
 type FinishTaskReply struct {
-	//not much tbh
 }
 type ExampleArgs struct {
 	X int

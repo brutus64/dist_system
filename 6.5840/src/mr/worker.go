@@ -51,15 +51,14 @@ func runMap(mapf func(string, string) []KeyValue, content string, reply AssignTa
 		}
 		enc := json.NewEncoder(file)
 		for _, kv := range buckets[i] {
-			err := enc.Encode(&kv)
-			if err != nil {
+			if err := enc.Encode(&kv); err != nil {
 				fmt.Println("error occurred while encoding key/val to map, removing temp file as well: ", err)
 				os.Remove(file.Name())
 				return err
 			}
 		}
 		//done encoding everything so time to atomically rename it
-		filename:= "mr" + strconv.Itoa(reply.MapTaskNum) + "-" + strconv.Itoa(i)
+		filename := "mr" + strconv.Itoa(reply.MapTaskNum) + "-" + strconv.Itoa(i)
 		file.Close()
 		os.Rename(file.Name(), filename)
 	}
@@ -68,6 +67,24 @@ func runMap(mapf func(string, string) []KeyValue, content string, reply AssignTa
 
 func runReduce(reduce func(string, []string) string, reply AssignTaskReply) error {
 	//reduce takes key for 1st param and list of values for 2nd param
+	n := reply.ReduceTaskNum
+	for i := range reply.TotalMapTasks {
+		filename := "mr" + strconv.Itoa(i) +"-" + strconv.Itoa(n)
+		file, err := os.Open(filename)
+		if err != nil {
+			fmt.Printf("error opening intermediate file during reduce task %v, err: %v", n, err)
+			return err
+		}
+		//kv := []string
+		dec := json.NewDecoder(file)
+		for {
+			var kv KeyValue
+			if err := dec.Decode(&kv); err != nil {
+				break
+			}
+			
+		}
+	}
 	return nil
 }
 //
