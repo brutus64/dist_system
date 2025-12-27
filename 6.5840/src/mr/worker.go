@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/rpc"
 	"os"
+	"sort"
 	"strconv"
 	"time"
 )
@@ -76,14 +77,34 @@ func runReduce(reduce func(string, []string) string, reply AssignTaskReply) erro
 			return err
 		}
 		//kv := []string
+		//need a map and a list of values for each map, array of maps(keystring,arr(valstring))
+		kvs := make(map[string][]string) //declare a map with key=string, val=list of string
 		dec := json.NewDecoder(file)
 		for {
 			var kv KeyValue
-			if err := dec.Decode(&kv); err != nil {
+			if err := dec.Decode(&kv); err != nil { //no more to decode
 				break
 			}
-			
+			kvs[kv.Key] = append(kvs[kv.Key], kv.Value)
 		}
+		file.Close()
+		var keys []string
+		for k := range kvs {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		//now all keys are made, we can pass to reduce
+		file, err = os.CreateTemp(".","reduce-temp")
+		if err != nil {
+			log.Fatalf("cannot read %v", filename)
+		}
+		for _, k := range keys {
+			res := reduce(k, kvs[k])
+			fmt.Fprintf(file, "%v %v\n", k, res)
+		}
+		filename = "mr-out-" + strconv.Itoa(reply.ReduceTaskNum)
+		file.Close()
+		os.Rename(file.Name(), filename)
 	}
 	return nil
 }
