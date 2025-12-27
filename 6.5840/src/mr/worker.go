@@ -59,7 +59,7 @@ func runMap(mapf func(string, string) []KeyValue, content string, reply AssignTa
 			}
 		}
 		//done encoding everything so time to atomically rename it
-		filename := "mr" + strconv.Itoa(reply.MapTaskNum) + "-" + strconv.Itoa(i)
+		filename := "mr-" + strconv.Itoa(reply.MapTaskNum) + "-" + strconv.Itoa(i)
 		file.Close()
 		os.Rename(file.Name(), filename)
 	}
@@ -69,16 +69,18 @@ func runMap(mapf func(string, string) []KeyValue, content string, reply AssignTa
 func runReduce(reduce func(string, []string) string, reply AssignTaskReply) error {
 	//reduce takes key for 1st param and list of values for 2nd param
 	n := reply.ReduceTaskNum
-	for i := range reply.TotalMapTasks {
-		filename := "mr" + strconv.Itoa(i) +"-" + strconv.Itoa(n)
+	fmt.Printf("BEFORE RUNNING LOOP, n: %v, totalmaptasks:, %v", n, reply.TotalMapTasks)
+	kvs := make(map[string][]string) //declare a map with key=string, val=list of string
+	//start reading through all map tasks for this reducer
+	for i := 0; i < reply.TotalMapTasks; i++ {
+		filename := "mr-" + strconv.Itoa(i) + "-" + strconv.Itoa(n)
+		fmt.Printf("filename from map reading: %v",filename)
 		file, err := os.Open(filename)
 		if err != nil {
-			fmt.Printf("error opening intermediate file during reduce task %v, err: %v", n, err)
-			return err
+			continue //some maptasks might not have outputs for a reducetask
 		}
 		//kv := []string
 		//need a map and a list of values for each map, array of maps(keystring,arr(valstring))
-		kvs := make(map[string][]string) //declare a map with key=string, val=list of string
 		dec := json.NewDecoder(file)
 		for {
 			var kv KeyValue
@@ -88,24 +90,26 @@ func runReduce(reduce func(string, []string) string, reply AssignTaskReply) erro
 			kvs[kv.Key] = append(kvs[kv.Key], kv.Value)
 		}
 		file.Close()
-		var keys []string
-		for k := range kvs {
-			keys = append(keys, k)
-		}
-		sort.Strings(keys)
-		//now all keys are made, we can pass to reduce
-		file, err = os.CreateTemp(".","reduce-temp")
-		if err != nil {
-			log.Fatalf("cannot read %v", filename)
-		}
-		for _, k := range keys {
-			res := reduce(k, kvs[k])
-			fmt.Fprintf(file, "%v %v\n", k, res)
-		}
-		filename = "mr-out-" + strconv.Itoa(reply.ReduceTaskNum)
-		file.Close()
-		os.Rename(file.Name(), filename)
 	}
+	//now sort the keys for this specific reducer
+	fmt.Printf("the map: %v", kvs)
+	var keys []string
+	for k := range kvs {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	//now all keys are made, we can pass to reduce
+	file, err := os.CreateTemp(".","reduce-temp")
+	if err != nil {
+		log.Fatalf("cannot read %v", err)
+	}
+	for _, k := range keys {
+		res := reduce(k, kvs[k])
+		fmt.Fprintf(file, "%v %v\n", k, res)
+	}
+	filename := "mr-out-" + strconv.Itoa(n)
+	file.Close()
+	os.Rename(file.Name(), filename)
 	return nil
 }
 //
