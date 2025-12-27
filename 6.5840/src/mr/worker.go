@@ -32,10 +32,6 @@ func ihash(key string) int {
 }
 
 func runMap(mapf func(string, string) []KeyValue, content string, reply AssignTaskReply) error {
-	/*
-	check N reduce tasks, 1 line per reduce task so mr-out-X-Y for x'th map task y'th reduce task
-	have keys and values in the form of: "%v %v" format key,value e.g. fmt.Fprintf(ofile, "%v %v\n", intermediate[i].Key, output)
-	*/
 	kvs := mapf(reply.InputFile, content)
 	//need to read all the keys, perform ihash, put it in the right bucket for file, with the index being the R'th reduce task
 	buckets := make([][]KeyValue, reply.N)
@@ -43,6 +39,7 @@ func runMap(mapf func(string, string) []KeyValue, content string, reply AssignTa
 		ind := ihash(kv.Key) % reply.N
 		buckets[ind] = append(buckets[ind], kv)
 	}
+
 	//for each bucket create them then add the stuff in json to the bucket
 	for i := range buckets{
 		file, err := os.CreateTemp(".","map-temp") //curr dir
@@ -58,6 +55,7 @@ func runMap(mapf func(string, string) []KeyValue, content string, reply AssignTa
 				return err
 			}
 		}
+
 		//done encoding everything so time to atomically rename it
 		filename := "mr-" + strconv.Itoa(reply.MapTaskNum) + "-" + strconv.Itoa(i)
 		file.Close()
@@ -69,18 +67,16 @@ func runMap(mapf func(string, string) []KeyValue, content string, reply AssignTa
 func runReduce(reduce func(string, []string) string, reply AssignTaskReply) error {
 	//reduce takes key for 1st param and list of values for 2nd param
 	n := reply.ReduceTaskNum
-	// fmt.Printf("BEFORE RUNNING LOOP, n: %v, totalmaptasks:, %v", n, reply.TotalMapTasks)
 	kvs := make(map[string][]string) //declare a map with key=string, val=list of string
+	
 	//start reading through all map tasks for this reducer
 	for i := 0; i < reply.TotalMapTasks; i++ {
 		filename := "mr-" + strconv.Itoa(i) + "-" + strconv.Itoa(n)
-		// fmt.Printf("filename from map reading: %v",filename)
 		file, err := os.Open(filename)
 		if err != nil {
 			continue //some maptasks might not have outputs for a reducetask
 		}
-		//kv := []string
-		//need a map and a list of values for each map, array of maps(keystring,arr(valstring))
+		
 		dec := json.NewDecoder(file)
 		for {
 			var kv KeyValue
@@ -92,12 +88,12 @@ func runReduce(reduce func(string, []string) string, reply AssignTaskReply) erro
 		file.Close()
 	}
 	//now sort the keys for this specific reducer
-	// fmt.Printf("the map: %v", kvs)
 	var keys []string
 	for k := range kvs {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
+
 	//now all keys are made, we can pass to reduce
 	file, err := os.CreateTemp(".","reduce-temp")
 	if err != nil {
@@ -112,6 +108,7 @@ func runReduce(reduce func(string, []string) string, reply AssignTaskReply) erro
 	os.Rename(file.Name(), filename)
 	return nil
 }
+
 //
 // main/mrworker.go calls this function.
 //
