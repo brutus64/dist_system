@@ -6,6 +6,8 @@ import (
 	"hash/fnv"
 	"log"
 	"net/rpc"
+	"os"
+	"sort"
 	"time"
 )
 
@@ -27,11 +29,22 @@ func ihash(key string) int {
 	return int(h.Sum32() & 0x7fffffff)
 }
 
-func runMap(mapf func(string, string) []KeyValue) {
+func runMap(mapf func(string, string) []KeyValue, content string, reply AssignTaskReply) {
 	/*
 	check N reduce tasks, 1 line per reduce task so mr-out-X-Y for x'th map task y'th reduce task
 	have keys and values in the form of: "%v %v" format key,value e.g. fmt.Fprintf(ofile, "%v %v\n", intermediate[i].Key, output)
 	*/
+	kvs := mapf(reply.InputFile, content)
+	//need to read all the keys, check for the ihash, put it in the right bucket for file
+	buckets := make([][]KeyValue, reply.N)
+	for _, kv := range kvs {
+		ind := ihash(kv.Key) % reply.N
+		buckets[ind] = append(buckets[ind], kv)
+	}
+	for i := 0; i < len(buckets); i++ {
+		file, err := os.CreateTemp("",)
+		
+	}
 }
 
 func runReduce(reduce func(string, []string) string) {
@@ -53,13 +66,19 @@ func Worker(mapf func(string, string) []KeyValue, reduce func(string, []string) 
 		if ok {
 			if reply.TaskAvail {
 				if reply.IsMap {
+					content, err := os.ReadFile(reply.InputFile)
+					if err != nil {
+						fmt.Println("error reading file %v, error: %v", reply.InputFile, err)
+					}
+					
 					//map function
 					//read file before calling runmap
 					// dec := json.NewDecoder()
 					// for {
 						
 					// }
-					runMap(mapf)
+					readable = string(content)
+					runMap(mapf, readable, reply)
 				} else {
 					runReduce(reduce)
 				}
