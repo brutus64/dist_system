@@ -2,12 +2,13 @@ package mr
 
 import (
 	// "encoding/json"
+	"encoding/json"
 	"fmt"
 	"hash/fnv"
 	"log"
 	"net/rpc"
 	"os"
-	"sort"
+	"strconv"
 	"time"
 )
 
@@ -29,26 +30,45 @@ func ihash(key string) int {
 	return int(h.Sum32() & 0x7fffffff)
 }
 
-func runMap(mapf func(string, string) []KeyValue, content string, reply AssignTaskReply) {
+func runMap(mapf func(string, string) []KeyValue, content string, reply AssignTaskReply) error {
 	/*
 	check N reduce tasks, 1 line per reduce task so mr-out-X-Y for x'th map task y'th reduce task
 	have keys and values in the form of: "%v %v" format key,value e.g. fmt.Fprintf(ofile, "%v %v\n", intermediate[i].Key, output)
 	*/
 	kvs := mapf(reply.InputFile, content)
-	//need to read all the keys, check for the ihash, put it in the right bucket for file
+	//need to read all the keys, perform ihash, put it in the right bucket for file, with the index being the R'th reduce task
 	buckets := make([][]KeyValue, reply.N)
 	for _, kv := range kvs {
 		ind := ihash(kv.Key) % reply.N
 		buckets[ind] = append(buckets[ind], kv)
 	}
-	for i := 0; i < len(buckets); i++ {
-		file, err := os.CreateTemp("",)
-		
+	//for each bucket create them then add the stuff in json to the bucket
+	for i := range buckets{
+		file, err := os.CreateTemp(".","map-temp") //curr dir
+		if err != nil {
+			fmt.Println("error creating temp file for maps: ", err)
+			return err
+		}
+		enc := json.NewEncoder(file)
+		for _, kv := range buckets[i] {
+			err := enc.Encode(&kv)
+			if err != nil {
+				fmt.Println("error occurred while encoding key/val to map, removing temp file as well: ", err)
+				os.Remove(file.Name())
+				return err
+			}
+		}
+		//done encoding everything so time to atomically rename it
+		filename:= "mr" + strconv.Itoa(reply.MapTaskNum) + "-" + strconv.Itoa(i)
+		file.Close()
+		os.Rename(file.Name(), filename)
 	}
+	return nil
 }
 
-func runReduce(reduce func(string, []string) string) {
-	
+func runReduce(reduce func(string, []string) string, reply AssignTaskReply) error {
+	//reduce takes key for 1st param and list of values for 2nd param
+	return nil
 }
 //
 // main/mrworker.go calls this function.
@@ -68,24 +88,29 @@ func Worker(mapf func(string, string) []KeyValue, reduce func(string, []string) 
 				if reply.IsMap {
 					content, err := os.ReadFile(reply.InputFile)
 					if err != nil {
-						fmt.Println("error reading file %v, error: %v", reply.InputFile, err)
+						fmt.Printf("error reading file %v, error: %v", reply.InputFile, err)
 					}
-					
-					//map function
-					//read file before calling runmap
-					// dec := json.NewDecoder()
-					// for {
-						
-					// }
-					readable = string(content)
-					runMap(mapf, readable, reply)
+					readable := string(content)
+					err = runMap(mapf, readable, reply)
+					if err != nil {
+						//should we send a rpc back saying task failed?
+					}
+					//send back rpc that its done, and have it store the intermediate file in the proper reduce task
+					doneArgs := FinishTaskArgs{true, reply.MapTaskNum, -1}
+					doneReply := FinishTaskReply{}
+					call("Coordinator.FinishTask", &doneArgs, &doneReply)
 				} else {
-					runReduce(reduce)
+					//for reduce need to read the intermediate files,
+					runReduce(reduce, reply)
+					doneArgs := FinishTaskArgs{false, -1, reply.ReduceTaskNum}
+					doneReply := FinishTaskReply{}
+					call("Coordinator.FinishTask", &doneArgs, &doneReply)
 				}
-			} else {
+				
+			} else { //no task just sleep
 				time.Sleep(time.Second * 2)
 			}
-		} else {
+		} else { //call to coordinator doesn't work
 			time.Sleep(time.Second * 2)
 		}
 	}
@@ -103,6 +128,7 @@ func CallExample() {
 
 	// fill in the argument(s).
 	args.X = 99
+	
 
 	// declare a reply structure.
 	reply := ExampleReply{}

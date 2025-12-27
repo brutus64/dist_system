@@ -93,6 +93,17 @@ func (c *Coordinator) AssignTask(args *AssignTaskArgs, reply *AssignTaskReply) e
 	return nil
 }
 
+
+func (c *Coordinator) FinishTask(args *FinishTaskArgs, reply *FinishTaskReply) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if args.IsMap {
+		c.mapTasks[args.MapTaskNum].status = "done"
+	} else {
+		c.reduceTasks[args.ReduceTaskNum].status = "done"
+	}
+	return nil
+}
 //
 // an example RPC handler.
 //

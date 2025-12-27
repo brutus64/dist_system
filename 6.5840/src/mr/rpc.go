@@ -15,7 +15,7 @@ import (
 // and reply for an RPC.
 //
 
-//when a worker asks for a task, what information should we send coordinator? 
+
 type AssignTaskArgs struct {
 	//not much tbh
 }
@@ -32,12 +32,13 @@ type AssignTaskReply struct {
 }
 
 type FinishTaskArgs struct {
-	WorkerNumber 	int
-	Status 			string
+	IsMap			bool
+	MapTaskNum	 	int
+	ReduceTaskNum	int
 }
 
 type FinishTaskReply struct {
-
+	//not much tbh
 }
 type ExampleArgs struct {
 	X int
