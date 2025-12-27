@@ -1,7 +1,7 @@
 package mr
 
 import (
-	"fmt"
+	// "fmt"
 	"log"
 	"net"
 	"net/http"
@@ -177,7 +177,7 @@ func (c *Coordinator) Done() bool {
 func MakeCoordinator(files []string, nReduce int) *Coordinator {
 	c := Coordinator{}
 	c.inputFiles = files
-	fmt.Println(c.inputFiles)
+	// fmt.Println(c.inputFiles)
 	c.n = nReduce
 	//initializing the maptasks and reducetasks
 	for i := 0; i < len(c.inputFiles); i++ {

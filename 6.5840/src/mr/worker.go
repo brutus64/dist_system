@@ -69,12 +69,12 @@ func runMap(mapf func(string, string) []KeyValue, content string, reply AssignTa
 func runReduce(reduce func(string, []string) string, reply AssignTaskReply) error {
 	//reduce takes key for 1st param and list of values for 2nd param
 	n := reply.ReduceTaskNum
-	fmt.Printf("BEFORE RUNNING LOOP, n: %v, totalmaptasks:, %v", n, reply.TotalMapTasks)
+	// fmt.Printf("BEFORE RUNNING LOOP, n: %v, totalmaptasks:, %v", n, reply.TotalMapTasks)
 	kvs := make(map[string][]string) //declare a map with key=string, val=list of string
 	//start reading through all map tasks for this reducer
 	for i := 0; i < reply.TotalMapTasks; i++ {
 		filename := "mr-" + strconv.Itoa(i) + "-" + strconv.Itoa(n)
-		fmt.Printf("filename from map reading: %v",filename)
+		// fmt.Printf("filename from map reading: %v",filename)
 		file, err := os.Open(filename)
 		if err != nil {
 			continue //some maptasks might not have outputs for a reducetask
@@ -92,7 +92,7 @@ func runReduce(reduce func(string, []string) string, reply AssignTaskReply) erro
 		file.Close()
 	}
 	//now sort the keys for this specific reducer
-	fmt.Printf("the map: %v", kvs)
+	// fmt.Printf("the map: %v", kvs)
 	var keys []string
 	for k := range kvs {
 		keys = append(keys, k)
