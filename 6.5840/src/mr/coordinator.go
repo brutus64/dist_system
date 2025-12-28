@@ -40,7 +40,7 @@ type Coordinator struct {
 
 }
 
-//have it check if map is done, if not also return a list of string of inputfiles not done 
+//check if maptasks are all done
 func (c *Coordinator) IsMapDone() bool {
 	inputMap := make(map[string]bool)
 	for _, v := range c.inputFiles {
@@ -57,6 +57,8 @@ func (c *Coordinator) IsMapDone() bool {
 }
 
 // Your code here -- RPC handlers for the worker to call.
+
+//assign a maptask or reducetask depending on what phase we're in
 func (c *Coordinator) AssignTask(args *AssignTaskArgs, reply *AssignTaskReply) error {
 	//to assign a task, need to look for map
 	c.mu.Lock()
@@ -77,7 +79,6 @@ func (c *Coordinator) AssignTask(args *AssignTaskArgs, reply *AssignTaskReply) e
 			}
 		}
 	} else { //reduce task assign
-		//assign a reducetask
 		for i, v := range c.reduceTasks {
 			if v.status == "idle" {
 				c.reduceTasks[i].status = "working"
@@ -94,7 +95,7 @@ func (c *Coordinator) AssignTask(args *AssignTaskArgs, reply *AssignTaskReply) e
 	return nil
 }
 
-
+//marks a task as done
 func (c *Coordinator) FinishTask(args *FinishTaskArgs, reply *FinishTaskReply) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -116,9 +117,8 @@ func (c *Coordinator) Example(args *ExampleArgs, reply *ExampleReply) error {
 }
 
 
-
+//check for tasks that take longer than 10 seconds that's still working and put them to idle
 func (c *Coordinator) ConsistentCheck() error {
-	//check for tasks that take longer than 10 seconds and put them to idle if its done
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	for i, v := range c.mapTasks {
@@ -177,7 +177,6 @@ func (c *Coordinator) Done() bool {
 func MakeCoordinator(files []string, nReduce int) *Coordinator {
 	c := Coordinator{}
 	c.inputFiles = files
-	// fmt.Println(c.inputFiles)
 	c.n = nReduce
 	//initializing the maptasks and reducetasks
 	for i := 0; i < len(c.inputFiles); i++ {
