@@ -130,10 +130,7 @@ func Worker(mapf func(string, string) []KeyValue, reduce func(string, []string) 
 						fmt.Printf("error reading file %v, error: %v", reply.InputFile, err)
 					}
 					readable := string(content)
-					err = runMap(mapf, readable, reply)
-					if err != nil {
-						//should we send a rpc back saying task failed?
-					}
+					runMap(mapf, readable, reply)
 					//send back rpc that its done, and have it store the intermediate file in the proper reduce task
 					doneArgs := FinishTaskArgs{true, reply.MapTaskNum, -1}
 					doneReply := FinishTaskReply{}
