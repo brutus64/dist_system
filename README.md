@@ -1,4 +1,4 @@
-# Distributed System from MIT, Labs and Notes Done by Me
+# Distributed System from MIT (reference spring 2025), Labs and Notes Done by Me
 
 I am not a student of MIT, I'm doing this for my own fun, interest, and learning.
 
