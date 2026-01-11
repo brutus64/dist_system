@@ -10,32 +10,32 @@ import (
 	"os"
 	"strconv"
 )
+
 //
 // example to show how to declare the arguments
 // and reply for an RPC.
 //
 
-
 type AssignTaskArgs struct {
 	//not much tbh
 }
 
-//when a worker gets information from a coordinator what should we receive back? all values in a reply needs to be public
+// when a worker gets information from a coordinator what should we receive back? all values in a reply needs to be public
 type AssignTaskReply struct {
-	IsMap 			bool //True = map, False = reduce
+	IsMap bool //True = map, False = reduce
 	// WorkerNumber int //For Map/Reduce number
-	InputFile 		string
-	MapTaskNum 		int
-	TotalMapTasks	int //for reduce to know filenames
-	N 				int //for reduce task
-	ReduceTaskNum 	int //reads from local file
-	TaskAvail 		bool //need a way for worker to know if it has a task or not when rpc calls so it knows if it should sleep or work on something
+	InputFile     string
+	MapTaskNum    int
+	TotalMapTasks int  //for reduce to know filenames
+	N             int  //for reduce task
+	ReduceTaskNum int  //reads from local file
+	TaskAvail     bool //need a way for worker to know if it has a task or not when rpc calls so it knows if it should sleep or work on something
 }
 
 type FinishTaskArgs struct {
-	IsMap			bool
-	MapTaskNum	 	int
-	ReduceTaskNum	int
+	IsMap         bool
+	MapTaskNum    int
+	ReduceTaskNum int
 }
 
 type FinishTaskReply struct {
@@ -49,7 +49,6 @@ type ExampleReply struct {
 }
 
 // Add your RPC definitions here.
-
 
 // Cook up a unique-ish UNIX-domain socket name
 // in /var/tmp, for the coordinator.

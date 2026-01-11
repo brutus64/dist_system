@@ -11,36 +11,35 @@ import (
 	"time"
 )
 
-//need to keep track of tasks and certain info on them like start time for timeout
+// need to keep track of tasks and certain info on them like start time for timeout
 type MapTask struct {
-	taskNum 	int //mapnumber, good for
-	timeStart 	time.Time
-	status 		string //can be either working, idle, or done
-	inputFile 	string
+	taskNum   int //mapnumber, good for
+	timeStart time.Time
+	status    string //can be either working, idle, or done
+	inputFile string
 }
 
 type ReduceTask struct {
-	taskNum 	int //reducenumber to know what file to look out for in reducer
-	timeStart 	time.Time
-	status 		string //can be either working, idle,
+	taskNum   int //reducenumber to know what file to look out for in reducer
+	timeStart time.Time
+	status    string //can be either working, idle,
 
 }
 type Coordinator struct {
 	// Your definitions here.
-	mapTasks 	[]MapTask
+	mapTasks    []MapTask
 	reduceTasks []ReduceTask
-	inputFiles 	[]string
-	n 			int
-	mu 			sync.Mutex
+	inputFiles  []string
+	n           int
+	mu          sync.Mutex
 
 	//rpc under the hood runs each RPC handler in own goroutine so need to use a mutex
 	//need to store all worker tasks (number, when they started, so we know 10 second timer or have it be a timeout in a "go")
 	//keep an idea of the files that have assigned tasks
 
-
 }
 
-//check if maptasks are all done
+// check if maptasks are all done
 func (c *Coordinator) IsMapDone() bool {
 	inputMap := make(map[string]bool)
 	for _, v := range c.inputFiles {
@@ -53,12 +52,12 @@ func (c *Coordinator) IsMapDone() bool {
 			numDone++
 		}
 	}
-	return numDone == len(inputMap) 
+	return numDone == len(inputMap)
 }
 
 // Your code here -- RPC handlers for the worker to call.
 
-//assign a maptask or reducetask depending on what phase we're in
+// assign a maptask or reducetask depending on what phase we're in
 func (c *Coordinator) AssignTask(args *AssignTaskArgs, reply *AssignTaskReply) error {
 	//to assign a task, need to look for map
 	c.mu.Lock()
@@ -95,7 +94,7 @@ func (c *Coordinator) AssignTask(args *AssignTaskArgs, reply *AssignTaskReply) e
 	return nil
 }
 
-//marks a task as done
+// marks a task as done
 func (c *Coordinator) FinishTask(args *FinishTaskArgs, reply *FinishTaskReply) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -106,38 +105,33 @@ func (c *Coordinator) FinishTask(args *FinishTaskArgs, reply *FinishTaskReply) e
 	}
 	return nil
 }
-//
+
 // an example RPC handler.
 //
 // the RPC argument and reply types are defined in rpc.go.
-//
 func (c *Coordinator) Example(args *ExampleArgs, reply *ExampleReply) error {
 	reply.Y = args.X + 1
 	return nil
 }
 
-
-//check for tasks that take longer than 10 seconds that's still working and put them to idle
+// check for tasks that take longer than 10 seconds that's still working and put them to idle
 func (c *Coordinator) ConsistentCheck() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	for i, v := range c.mapTasks {
-		if time.Since(v.timeStart) > time.Second * 10 && v.status == "working" {
+		if time.Since(v.timeStart) > time.Second*10 && v.status == "working" {
 			c.mapTasks[i].status = "idle"
 		}
 	}
 	for i, v := range c.reduceTasks {
-		if time.Since(v.timeStart) > time.Second * 10 && v.status == "working" {
+		if time.Since(v.timeStart) > time.Second*10 && v.status == "working" {
 			c.reduceTasks[i].status = "idle"
 		}
 	}
 	return nil
 }
 
-
-//
 // start a thread that listens for RPCs from worker.go
-//
 func (c *Coordinator) server() {
 	rpc.Register(c)
 	rpc.HandleHTTP()
@@ -151,10 +145,8 @@ func (c *Coordinator) server() {
 	go http.Serve(l, nil)
 }
 
-//
 // main/mrcoordinator.go calls Done() periodically to find out
 // if the entire job has finished.
-//
 func (c *Coordinator) Done() bool {
 	ret := false
 	count := 0
@@ -169,11 +161,9 @@ func (c *Coordinator) Done() bool {
 	return ret
 }
 
-//
 // create a Coordinator.
 // main/mrcoordinator.go calls this function.
 // nReduce is the number of reduce tasks to use.
-//
 func MakeCoordinator(files []string, nReduce int) *Coordinator {
 	c := Coordinator{}
 	c.inputFiles = files
@@ -189,10 +179,10 @@ func MakeCoordinator(files []string, nReduce int) *Coordinator {
 	go func() {
 		for {
 			c.ConsistentCheck()
-			time.Sleep(2*time.Second)
+			time.Sleep(2 * time.Second)
 		}
 	}()
 	c.server()
-	
+
 	return &c
 }

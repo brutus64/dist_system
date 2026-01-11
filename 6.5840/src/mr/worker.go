@@ -13,18 +13,14 @@ import (
 	"time"
 )
 
-//
 // Map functions return a slice of KeyValue.
-//
 type KeyValue struct {
 	Key   string
 	Value string
 }
 
-//
 // use ihash(key) % NReduce to choose the reduce
 // task number for each KeyValue emitted by Map.
-//
 func ihash(key string) int {
 	h := fnv.New32a()
 	h.Write([]byte(key))
@@ -41,8 +37,8 @@ func runMap(mapf func(string, string) []KeyValue, content string, reply AssignTa
 	}
 
 	//for each bucket create them then add the stuff in json to the bucket
-	for i := range buckets{
-		file, err := os.CreateTemp(".","map-temp") //curr dir
+	for i := range buckets {
+		file, err := os.CreateTemp(".", "map-temp") //curr dir
 		if err != nil {
 			fmt.Println("error creating temp file for maps: ", err)
 			return err
@@ -68,7 +64,7 @@ func runReduce(reduce func(string, []string) string, reply AssignTaskReply) erro
 	//reduce takes key for 1st param and list of values for 2nd param
 	n := reply.ReduceTaskNum
 	kvs := make(map[string][]string) //declare a map with key=string, val=list of string
-	
+
 	//start reading through all map tasks for this reducer
 	for i := 0; i < reply.TotalMapTasks; i++ {
 		filename := "mr-" + strconv.Itoa(i) + "-" + strconv.Itoa(n)
@@ -76,7 +72,7 @@ func runReduce(reduce func(string, []string) string, reply AssignTaskReply) erro
 		if err != nil {
 			continue //some maptasks might not have outputs for a reducetask
 		}
-		
+
 		dec := json.NewDecoder(file)
 		for {
 			var kv KeyValue
@@ -95,7 +91,7 @@ func runReduce(reduce func(string, []string) string, reply AssignTaskReply) erro
 	sort.Strings(keys)
 
 	//now all keys are made, we can pass to reduce
-	file, err := os.CreateTemp(".","reduce-temp")
+	file, err := os.CreateTemp(".", "reduce-temp")
 	if err != nil {
 		log.Fatalf("cannot read %v", err)
 	}
@@ -109,13 +105,11 @@ func runReduce(reduce func(string, []string) string, reply AssignTaskReply) erro
 	return nil
 }
 
-//
 // main/mrworker.go calls this function.
-//
 func Worker(mapf func(string, string) []KeyValue, reduce func(string, []string) string) {
 
 	// Your worker implementation here.
-	
+
 	// uncomment to send the Example RPC to the coordinator.
 	// CallExample()
 	for {
@@ -142,7 +136,7 @@ func Worker(mapf func(string, string) []KeyValue, reduce func(string, []string) 
 					doneReply := FinishTaskReply{}
 					call("Coordinator.FinishTask", &doneArgs, &doneReply)
 				}
-				
+
 			} else { //no task just sleep
 				time.Sleep(time.Second * 2)
 			}
@@ -152,11 +146,9 @@ func Worker(mapf func(string, string) []KeyValue, reduce func(string, []string) 
 	}
 }
 
-//
 // example function to show how to make an RPC call to the coordinator.
 //
 // the RPC argument and reply types are defined in rpc.go.
-//
 func CallExample() {
 
 	// declare an argument structure.
@@ -164,7 +156,6 @@ func CallExample() {
 
 	// fill in the argument(s).
 	args.X = 99
-	
 
 	// declare a reply structure.
 	reply := ExampleReply{}
@@ -182,11 +173,9 @@ func CallExample() {
 	}
 }
 
-//
 // send an RPC request to the coordinator, wait for the response.
 // usually returns true.
 // returns false if something goes wrong.
-//
 func call(rpcname string, args any, reply any) bool {
 	// c, err := rpc.DialHTTP("tcp", "127.0.0.1"+":1234")
 	sockname := coordinatorSock()
