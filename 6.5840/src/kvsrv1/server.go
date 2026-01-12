@@ -6,7 +6,7 @@ import (
 
 	"6.5840/kvsrv1/rpc"
 	"6.5840/labrpc"
-	"6.5840/tester1"
+	tester "6.5840/tester1"
 )
 
 const Debug = false
@@ -18,16 +18,20 @@ func DPrintf(format string, a ...interface{}) (n int, err error) {
 	return
 }
 
+type value struct {
+	value   string
+	version rpc.Tversion
+}
 
 type KVServer struct {
-	mu sync.Mutex
-
-	// Your definitions here.
+	mu    sync.Mutex
+	store map[string]value
 }
 
 func MakeKVServer() *KVServer {
-	kv := &KVServer{}
+	kv := &KVServer{store: make(map[string]value)}
 	// Your code here.
+
 	return kv
 }
 
@@ -35,6 +39,16 @@ func MakeKVServer() *KVServer {
 // exists. Otherwise, Get returns ErrNoKey.
 func (kv *KVServer) Get(args *rpc.GetArgs, reply *rpc.GetReply) {
 	// Your code here.
+	kv.mu.Lock()
+	defer kv.mu.Unlock()
+	val, ok := kv.store[args.Key]
+	if !ok {
+		reply.Err = rpc.ErrNoKey
+		return
+	}
+	reply.Value = val.value
+	reply.Version = val.version
+	reply.Err = rpc.OK
 }
 
 // Update the value for a key if args.Version matches the version of
@@ -43,12 +57,30 @@ func (kv *KVServer) Get(args *rpc.GetArgs, reply *rpc.GetReply) {
 // args.Version is 0, and returns ErrNoKey otherwise.
 func (kv *KVServer) Put(args *rpc.PutArgs, reply *rpc.PutReply) {
 	// Your code here.
+	kv.mu.Lock()
+	defer kv.mu.Unlock()
+	val, ok := kv.store[args.Key]
+	if !ok {
+		if args.Version == 0 {
+			kv.store[args.Key] = value{value: args.Value, version: 1}
+			reply.Err = rpc.OK
+		} else { //version > 0 but key clearly doesn't exist
+			reply.Err = rpc.ErrNoKey
+		}
+		return
+	}
+
+	if val.version == args.Version {
+		kv.store[args.Key] = value{value: args.Value, version: val.version + 1}
+		reply.Err = rpc.OK
+	} else {
+		reply.Err = rpc.ErrVersion
+	}
 }
 
 // You can ignore Kill() for this lab
 func (kv *KVServer) Kill() {
 }
-
 
 // You can ignore all arguments; they are for replicated KVservers
 func StartKVServer(ends []*labrpc.ClientEnd, gid tester.Tgid, srv int, persister *tester.Persister) []tester.IService {
