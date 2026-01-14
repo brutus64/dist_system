@@ -42,6 +42,7 @@ func (lk *Lock) Acquire() {
 		val, ver, err := lk.ck.Get(lk.lockKey)
 		if err == rpc.ErrNoKey {
 			err = lk.ck.Put(lk.lockKey, lk.clientID, 0)
+			//should not check errMaybe, we need to know 100% that it went through to be confident in acquiring
 			if err == rpc.OK {
 				return
 			}
@@ -50,6 +51,7 @@ func (lk *Lock) Acquire() {
 		switch val {
 		case "":
 			err = lk.ck.Put(lk.lockKey, lk.clientID, ver)
+			//should not check errMaybe, we need to know 100% that it went through to be confident in acquiring
 			if err == rpc.OK {
 				return
 			}
@@ -67,7 +69,12 @@ func (lk *Lock) Release() {
 		return
 	}
 	err = lk.ck.Put(lk.lockKey, "", ver)
-	for err != rpc.OK {
-		err = lk.ck.Put(lk.lockKey, "", ver)
-	}
+	//err returns ErrMaybe or OK only from Put
+	//err.OK is for sure done
+	//errMaybe is good enough too since we know val == lk.clientID, so only we can release it and if we get ErrMaybe it means we got a ErrVersion after retry, and only we can be the cause of that since only a client can release its own lock
+	
+	//no longer needed cause Put allows errmaybe and handles retry already in Put of client.go (it was the source of my infinite loop)
+	// for err != rpc.OK {
+	// 	err = lk.ck.Put(lk.lockKey, "", ver)
+	// }
 }
