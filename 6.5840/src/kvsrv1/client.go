@@ -1,6 +1,7 @@
 package kvsrv
 
 import (
+	"time"
 	"6.5840/kvsrv1/rpc"
 	kvtest "6.5840/kvtest1"
 	tester "6.5840/tester1"
@@ -34,6 +35,7 @@ func (ck *Clerk) Get(key string) (string, rpc.Tversion, rpc.Err) {
 	ok := ck.clnt.Call(ck.server, "KVServer.Get", &args, &reply)
 	for !ok {
 		ok = ck.clnt.Call(ck.server, "KVServer.Get", &args, &reply)
+		time.Sleep(100 * time.Millisecond)
 	}
 	return reply.Value, reply.Version, reply.Err
 }
@@ -60,8 +62,14 @@ func (ck *Clerk) Put(key, value string, version rpc.Tversion) rpc.Err {
 	args := rpc.PutArgs{Key: key, Value: value, Version: version}
 	reply := rpc.PutReply{}
 	ok := ck.clnt.Call(ck.server, "KVServer.Put", &args, &reply)
+	retried := false
 	for !ok {
 		ok = ck.clnt.Call(ck.server, "KVServer.Put", &args, &reply)
+		retried = true
+		time.Sleep(100 * time.Millisecond)
+	}
+	if reply.Err == rpc.ErrVersion && retried {
+		return rpc.ErrMaybe
 	}
 	return reply.Err
 }

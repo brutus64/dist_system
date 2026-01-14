@@ -119,7 +119,7 @@ Challenge: Network can ```re-order, delay, discard RPC reqs/responses```, need t
         <br><br> OK for PUT RPC with same version # -> server only runs PUT if version # is same, if it has executed already on 1st time, 2nd time respond with ```rpc.ErrVersion``` since version state no longer same 
         <br><br> ```ISSUE THOUGH -> Clerk still don't know if Clerk's PUT was executed or not```
         1) 1st RPC executed -> response droppped -> retry request from Client -> rpc.ErrVersion
-        - Result: ```Clerk.Put``` has to return ```rpc.ErrMaybe``` instead of ```rpc.ErrVersion``` cause the request could've been executed, then the app handles the case. 
+        - Result: ```Clerk.Put``` has to return ```rpc.ErrMaybe``` instead of ```rpc.ErrVersion``` (if it was retransmitted put request) cause the request could've been executed, then the app handles the case. 
         2) Another Clerk updated key before Clerk's 1st RPC -> server executes NONE of the 2 Clerk's RPC -> 2 rpc.ErrVersion
         - Result: ```Clerk.Put``` responds with ```rpc.ErrVersion``` to app since we know RPC was definitely not executed by server
 
